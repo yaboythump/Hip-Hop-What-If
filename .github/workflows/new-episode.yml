@@ -1,0 +1,47 @@
+name: Hip Hop What If - New Episode
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode_topic:
+        description: "What episode do you want to create?"
+        required: true
+        type: string
+      upload_privacy:
+        description: "YouTube upload privacy for testing"
+        required: true
+        default: "private"
+        type: choice
+        options:
+          - private
+          - unlisted
+          - public
+
+jobs:
+  new_episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build test episode package
+        run: |
+          mkdir -p output
+          python scripts/new_episode.py \
+            --episode-topic "${{ inputs.episode_topic }}" \
+            --upload-privacy "${{ inputs.upload_privacy }}"
+
+      - name: Keep episode package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hip-hop-what-if-test-package
+          retention-days: 14
+          path: |
+            output/**
