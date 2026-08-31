@@ -5,11 +5,20 @@ on:
     inputs:
       episode_topic:
         description: "What episode do you want to create?"
-        required: false
+        required: true
         default: "What If Jay-Z Signed Everybody To Roc-A-Fella?"
         type: string
+      video_url:
+        description: "Paste the Higgsfield final MP4 download URL here"
+        required: true
+        type: string
+      thumbnail_url:
+        description: "Optional thumbnail image URL"
+        required: false
+        default: ""
+        type: string
       upload_privacy:
-        description: "YouTube upload privacy for testing"
+        description: "YouTube upload privacy"
         required: true
         default: "private"
         type: choice
@@ -24,8 +33,10 @@ jobs:
     timeout-minutes: 30
 
     env:
-      EPISODE_TOPIC: ${{ github.event.inputs.episode_topic || 'What If Jay-Z Signed Everybody To Roc-A-Fella?' }}
-      UPLOAD_PRIVACY: ${{ github.event.inputs.upload_privacy || 'private' }}
+      EPISODE_TOPIC: ${{ github.event.inputs.episode_topic }}
+      VIDEO_URL: ${{ github.event.inputs.video_url }}
+      THUMBNAIL_URL: ${{ github.event.inputs.thumbnail_url }}
+      UPLOAD_PRIVACY: ${{ github.event.inputs.upload_privacy }}
 
     steps:
       - name: Checkout repo
@@ -41,7 +52,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build test episode package
+      - name: Build episode package
         run: |
           mkdir -p output
           python scripts/new_episode.py \
@@ -64,7 +75,46 @@ jobs:
           echo "episode_dir=$EPISODE_DIR" >> "$GITHUB_OUTPUT"
           echo "Found episode folder: $EPISODE_DIR"
 
-      - name: Validate YouTube upload package
+      - name: Download Higgsfield final video
+        shell: bash
+        run: |
+          if [[ -z "$VIDEO_URL" ]]; then
+            echo "::error::Missing Higgsfield video URL"
+            exit 1
+          fi
+
+          EPISODE_DIR="${{ steps.episode.outputs.episode_dir }}"
+
+          echo "Downloading Higgsfield video..."
+          curl -L --fail --retry 3 --retry-delay 5 \
+            "$VIDEO_URL" \
+            -o "$EPISODE_DIR/final.mp4"
+
+          if [[ ! -s "$EPISODE_DIR/final.mp4" ]]; then
+            echo "::error::Downloaded final.mp4 is missing or empty"
+            exit 1
+          fi
+
+          echo "Downloaded final video to $EPISODE_DIR/final.mp4"
+
+      - name: Download thumbnail if provided
+        shell: bash
+        run: |
+          EPISODE_DIR="${{ steps.episode.outputs.episode_dir }}"
+
+          if [[ -z "$THUMBNAIL_URL" ]]; then
+            echo "No thumbnail URL provided. Skipping thumbnail download."
+            exit 0
+          fi
+
+          echo "Downloading thumbnail..."
+          curl -L --fail --retry 3 --retry-delay 5 \
+            "$THUMBNAIL_URL" \
+            -o "$EPISODE_DIR/thumbnail.png"
+
+          echo "Downloaded thumbnail to $EPISODE_DIR/thumbnail.png"
+
+      - name: Upload private episode to YouTube
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
@@ -72,13 +122,12 @@ jobs:
         run: |
           python scripts/upload_youtube.py \
             --episode-dir "${{ steps.episode.outputs.episode_dir }}" \
-            --privacy "$UPLOAD_PRIVACY" \
-            --dry-run
+            --privacy "$UPLOAD_PRIVACY"
 
       - name: Keep episode package
         uses: actions/upload-artifact@v4
         with:
-          name: hip-hop-what-if-test-package
+          name: hip-hop-what-if-upload-package
           retention-days: 14
           path: |
             output/**
