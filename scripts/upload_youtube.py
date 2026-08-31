@@ -13,6 +13,9 @@ REQUIRED_SECRETS = [
     "YOUTUBE_CLIENT_ID",
     "YOUTUBE_CLIENT_SECRET",
     "YOUTUBE_REFRESH_TOKEN",
+]
+
+OPTIONAL_SECRETS = [
     "YOUTUBE_CHANNEL_ID",
 ]
 
@@ -152,12 +155,13 @@ def main() -> None:
         print(f"Short {short.get('part')}: {short.get('title')} -> {short.get('filename')}")
 
     missing_secrets = [name for name in REQUIRED_SECRETS if not os.getenv(name)]
+    missing_optional = [name for name in OPTIONAL_SECRETS if not os.getenv(name)]
 
     if missing_secrets:
-        print("")
-        print("Missing YouTube secrets:")
-        for name in missing_secrets:
-            print(f"- {name}")
+    print("")
+    print("Missing YouTube secrets:")
+    for name in missing_secrets:
+        print(f"- {name}")
 
     if args.dry_run:
         print("")
