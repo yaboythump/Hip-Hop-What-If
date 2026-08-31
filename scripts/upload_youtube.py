@@ -126,9 +126,21 @@ def upload_thumbnail(youtube, video_id: str, thumbnail_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Direct YouTube uploader for Hip Hop What If.")
-    parser.add_argument("--episode-dir", required=True, help="Example: output/what-if-tupac-signed-with-no-limit")
-    parser.add_argument("--privacy", default="private", choices=["private", "unlisted", "public"])
-    parser.add_argument("--dry-run", action="store_true", help="Validate upload package without uploading.")
+    parser.add_argument(
+        "--episode-dir",
+        required=True,
+        help="Example: output/what-if-tupac-signed-with-no-limit",
+    )
+    parser.add_argument(
+        "--privacy",
+        default="private",
+        choices=["private", "unlisted", "public"],
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate upload package without uploading.",
+    )
     args = parser.parse_args()
 
     episode_dir = Path(args.episode_dir)
@@ -158,10 +170,17 @@ def main() -> None:
     missing_optional = [name for name in OPTIONAL_SECRETS if not os.getenv(name)]
 
     if missing_secrets:
-    print("")
-    print("Missing YouTube secrets:")
-    for name in missing_secrets:
-        print(f"- {name}")
+        print("")
+        print("Missing required YouTube secrets:")
+        for name in missing_secrets:
+            print(f"- {name}")
+
+    if missing_optional:
+        print("")
+        print("Missing optional YouTube secrets:")
+        for name in missing_optional:
+            print(f"- {name}")
+        print("Continuing is okay. Upload will use the channel tied to the OAuth token.")
 
     if args.dry_run:
         print("")
@@ -169,7 +188,7 @@ def main() -> None:
         return
 
     if missing_secrets:
-        raise RuntimeError("Cannot upload until all YouTube secrets are configured.")
+        raise RuntimeError("Cannot upload until all required YouTube secrets are configured.")
 
     youtube = get_youtube_client()
 
