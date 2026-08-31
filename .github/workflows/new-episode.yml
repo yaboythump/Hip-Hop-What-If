@@ -38,6 +38,21 @@ jobs:
             --episode-topic "${{ inputs.episode_topic }}" \
             --upload-privacy "${{ inputs.upload_privacy }}"
 
+      - name: Find episode folder
+        id: episode
+        shell: bash
+        run: |
+          EPISODE_DIR="$(find output -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          echo "episode_dir=$EPISODE_DIR" >> "$GITHUB_OUTPUT"
+          echo "Found episode folder: $EPISODE_DIR"
+
+      - name: Validate YouTube upload package
+        run: |
+          python scripts/upload_youtube.py \
+            --episode-dir "${{ steps.episode.outputs.episode_dir }}" \
+            --privacy "${{ inputs.upload_privacy }}" \
+            --dry-run
+
       - name: Keep episode package
         uses: actions/upload-artifact@v4
         with:
