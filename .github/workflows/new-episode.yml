@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    env:
+      EPISODE_TOPIC: ${{ github.event.inputs.episode_topic }}
+      UPLOAD_PRIVACY: ${{ github.event.inputs.upload_privacy }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -40,8 +44,8 @@ jobs:
         run: |
           mkdir -p output
           python scripts/new_episode.py \
-            --episode-topic "${{ inputs.episode_topic }}" \
-            --upload-privacy "${{ inputs.upload_privacy }}"
+            --episode-topic "$EPISODE_TOPIC" \
+            --upload-privacy "$UPLOAD_PRIVACY"
 
       - name: Find episode folder
         id: episode
@@ -55,7 +59,7 @@ jobs:
         run: |
           python scripts/upload_youtube.py \
             --episode-dir "${{ steps.episode.outputs.episode_dir }}" \
-            --privacy "${{ inputs.upload_privacy }}" \
+            --privacy "$UPLOAD_PRIVACY" \
             --dry-run
 
       - name: Keep episode package
