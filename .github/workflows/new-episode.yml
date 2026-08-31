@@ -1,55 +1,80 @@
-env:
-  EPISODE_TOPIC: ${{ github.event.inputs.episode_topic || 'What If Jay-Z Signed Everybody To Roc-A-Fella?' }}
-  UPLOAD_PRIVACY: ${{ github.event.inputs.upload_privacy || 'private' }}
+name: Hip Hop What If - New Episode
 
-steps:
-  - name: Checkout repo
-    uses: actions/checkout@v4
+on:
+  workflow_dispatch:
+    inputs:
+      episode_topic:
+        description: "What episode do you want to create?"
+        required: false
+        default: "What If Jay-Z Signed Everybody To Roc-A-Fella?"
+        type: string
+      upload_privacy:
+        description: "YouTube upload privacy for testing"
+        required: true
+        default: "private"
+        type: choice
+        options:
+          - private
+          - unlisted
+          - public
 
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
+jobs:
+  new_episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-  - name: Install Python requirements
-    run: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
+    env:
+      EPISODE_TOPIC: ${{ github.event.inputs.episode_topic || 'What If Jay-Z Signed Everybody To Roc-A-Fella?' }}
+      UPLOAD_PRIVACY: ${{ github.event.inputs.upload_privacy || 'private' }}
 
-  - name: Build test episode package
-    run: |
-      mkdir -p output
-      python scripts/new_episode.py \
-        --episode-topic "$EPISODE_TOPIC" \
-        --upload-privacy "$UPLOAD_PRIVACY"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-  - name: Find episode folder
-    id: episode
-    shell: bash
-    run: |
-      EPISODE_DIR="$(find output -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-      if [[ -z "$EPISODE_DIR" ]]; then
-        echo "::error::No episode folder was created under output/"
-        exit 1
-      fi
-      if [[ ! -f "$EPISODE_DIR/episode-package.json" ]]; then
-        echo "::error::Missing episode package: $EPISODE_DIR/episode-package.json"
-        exit 1
-      fi
-      echo "episode_dir=$EPISODE_DIR" >> "$GITHUB_OUTPUT"
-      echo "Found episode folder: $EPISODE_DIR"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  - name: Validate YouTube upload package
-    run: |
-      python scripts/upload_youtube.py \
-        --episode-dir "${{ steps.episode.outputs.episode_dir }}" \
-        --privacy "$UPLOAD_PRIVACY" \
-        --dry-run
+      - name: Install Python requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-  - name: Keep episode package
-    uses: actions/upload-artifact@v4
-    with:
-      name: hip-hop-what-if-test-package
-      retention-days: 14
-      path: |
-        output/**
+      - name: Build test episode package
+        run: |
+          mkdir -p output
+          python scripts/new_episode.py \
+            --episode-topic "$EPISODE_TOPIC" \
+            --upload-privacy "$UPLOAD_PRIVACY"
+
+      - name: Find episode folder
+        id: episode
+        shell: bash
+        run: |
+          EPISODE_DIR="$(find output -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          if [[ -z "$EPISODE_DIR" ]]; then
+            echo "::error::No episode folder was created under output/"
+            exit 1
+          fi
+          if [[ ! -f "$EPISODE_DIR/episode-package.json" ]]; then
+            echo "::error::Missing episode package: $EPISODE_DIR/episode-package.json"
+            exit 1
+          fi
+          echo "episode_dir=$EPISODE_DIR" >> "$GITHUB_OUTPUT"
+          echo "Found episode folder: $EPISODE_DIR"
+
+      - name: Validate YouTube upload package
+        run: |
+          python scripts/upload_youtube.py \
+            --episode-dir "${{ steps.episode.outputs.episode_dir }}" \
+            --privacy "$UPLOAD_PRIVACY" \
+            --dry-run
+
+      - name: Keep episode package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hip-hop-what-if-test-package
+          retention-days: 14
+          path: |
+            output/**
